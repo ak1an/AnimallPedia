@@ -1,0 +1,1 @@
+export { default as PopularAnimals } from './PopularAnimals';
