@@ -1,72 +1,101 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaBars, FaTimes, FaInfoCircle, FaGamepad, FaHeart, FaNewspaper, FaBook, FaComments } from 'react-icons/fa';
 
-/**
- * Navigation menu component for AnimalPedia
- * Contains links to main sections of the site
- */
 const NavMenu: React.FC = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Navigation items
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const closeMenu = () => {
+    setIsOpen(false);
+  };
+
   const navItems = [
-    { name: 'Categories', path: '/categories' },
-    { name: 'Red Book', path: '/red-book' },
-    { name: 'News', path: '/news' },
-    { name: 'Favorites', path: '/favorites' },
-    { name: 'Mini Games', path: '/games' },
-    { name: 'About Us', path: '/about' },
-    { name: 'Reviews', path: '/reviews' },
+    { to: '/categories', label: 'Категории', icon: <FaBook /> },
+    { to: '/habitat-filter', label: 'Среда обитания', icon: <FaBook /> },
+    { to: '/red-book', label: 'Красная книга', icon: <FaBook /> },
+    { to: '/games', label: 'Игры', icon: <FaGamepad /> },
+    { to: '/news', label: 'Новости', icon: <FaNewspaper /> },
+    { to: '/reviews', label: 'Отзывы', icon: <FaComments /> },
+    { to: '/about', label: 'О нас', icon: <FaInfoCircle /> },
   ];
 
   return (
     <>
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex space-x-1">
+      <nav className="hidden md:flex items-center space-x-1">
         {navItems.map((item) => (
           <Link
-            key={item.path}
-            to={item.path}
-            className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            key={item.to}
+            to={item.to}
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center ${
+              location.pathname === item.to
+                ? 'bg-green-600 text-white'
+                : 'text-gray-700 hover:bg-green-100 dark:text-gray-300 dark:hover:bg-gray-700'
+            }`}
+            onClick={closeMenu}
           >
-            {item.name}
+            <span className="mr-2">{item.icon}</span>
+            {item.label}
           </Link>
         ))}
       </nav>
 
-      {/* Mobile menu button */}
-      <div className="md:hidden">
+      {/* Mobile Navigation Toggle */}
+      <div className="md:hidden flex items-center">
         <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white focus:outline-none"
+          onClick={toggleMenu}
+          className="ml-2 text-gray-700 dark:text-gray-300 focus:outline-none"
+          aria-label={isOpen ? 'Закрыть меню' : 'Открыть меню'}
         >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {isMobileMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
+          {isOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
         </button>
       </div>
 
       {/* Mobile Navigation Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-16 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg z-50">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                {item.name}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black bg-opacity-40 z-40 md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeMenu}
+            />
+            <motion.div
+              className="fixed top-16 right-0 bottom-0 w-64 bg-white dark:bg-gray-800 shadow-lg z-50 md:hidden overflow-y-auto"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.2 }}
+            >
+              <div className="py-4">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`flex items-center px-4 py-3 text-base font-medium transition-colors duration-200 ${
+                      location.pathname === item.to
+                        ? 'bg-green-600 text-white'
+                        : 'text-gray-700 hover:bg-green-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
+                    onClick={closeMenu}
+                  >
+                    <span className="mr-3">{item.icon}</span>
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 };

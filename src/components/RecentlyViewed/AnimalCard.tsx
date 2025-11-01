@@ -1,4 +1,6 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 interface Animal {
   id: string;
@@ -17,12 +19,16 @@ interface AnimalCardProps {
 
 const AnimalCard: React.FC<AnimalCardProps> = ({ animal }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex flex-col h-full min-w-[250px]">
+    <motion.div 
+      className="rounded-2xl shadow-xl bg-white hover:scale-105 transition-all duration-300 flex flex-col h-full"
+      whileHover={{ scale: 1.05 }}
+      transition={{ type: "spring", stiffness: 400, damping: 10 }}
+    >
       <div className="relative">
         <img 
           src={animal.photo} 
           alt={animal.name} 
-          className="w-full h-48 object-cover"
+          className="h-48 w-full object-cover rounded-t-2xl"
         />
         {animal.redBook && (
           <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
@@ -32,10 +38,16 @@ const AnimalCard: React.FC<AnimalCardProps> = ({ animal }) => {
       </div>
       
       <div className="p-4 flex-grow flex flex-col">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{animal.name}</h3>
-        <p className="text-gray-600 dark:text-gray-400 text-sm flex-grow">{animal.habitat}</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{animal.name}</h3>
+        <p className="text-gray-600 dark:text-gray-400 text-sm flex-grow">{animal.short}</p>
+        <Link 
+          to={`/animal/${animal.id}`}
+          className="mt-3 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-sm font-medium"
+        >
+          Подробнее →
+        </Link>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

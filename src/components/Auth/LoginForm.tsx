@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../firebase/config';
+import { loginUser } from './utils/authFunctions';
 import { setUser } from '../../store/slices/userSlice';
 import { mapAuthError } from './utils/authErrors';
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;
@@ -15,6 +16,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
@@ -40,6 +42,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     
     if (!validateForm()) {
       return;
@@ -48,34 +51,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
     setLoading(true);
     
     try {
-      // Sign in with email and password
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // Call the loginUser function from authFunctions
+      await loginUser(email, password);
       
-      // Get user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        // Update last login time
-        const updatedUserData = {
-          ...userData,
-          lastLogin: new Date().toISOString()
-        };
-        
-        // Dispatch to Redux store
-        dispatch(setUser({
-          uid: user.uid,
-          name: userData.name,
-          email: userData.email,
-          avatarUrl: userData.avatarUrl,
-          favoriteAnimals: userData.favoriteAnimals || [],
-          registrationDate: userData.registrationDate,
-          lastLogin: updatedUserData.lastLogin
-        }));
-      } else {
-        setError('Пользователь не найден');
-      }
+      // If login is successful, redirect to home page
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
     } catch (err: any) {
       console.error('Login error:', err);
       setError(mapAuthError(err.code) || 'Ошибка при входе');
@@ -87,8 +69,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
+    setSuccess('');
     
     try {
+      const auth = getAuth();
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
@@ -97,39 +81,66 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       
       if (userDoc.exists()) {
-        // User exists, update last login
+        // User exists
         const userData = userDoc.data();
-        const updatedUserData = {
-          ...userData,
-          lastLogin: new Date().toISOString()
-        };
         
-        // Dispatch to Redux store
+        // Check if the authenticated user matches the document owner
+        if (auth.currentUser && auth.currentUser.uid === user.uid) {
+          // Update lastLogin in Firestore using updateDoc for security
+          await updateDoc(doc(db, 'users', user.uid), {
+            lastLogin: serverTimestamp()
+          });
+        }
+        
+        // Dispatch to Redux store with full user data
         dispatch(setUser({
           uid: user.uid,
-          name: userData.name,
-          email: userData.email,
-          avatarUrl: userData.avatarUrl,
+          name: userData.name || user.displayName || 'Пользователь',
+          email: userData.email || user.email || '',
+          avatarUrl: userData.avatarUrl || user.photoURL || '',
           favoriteAnimals: userData.favoriteAnimals || [],
-          registrationDate: userData.registrationDate,
-          lastLogin: updatedUserData.lastLogin
+          registrationDate: userData.registrationDate || new Date().toISOString(),
+          lastLogin: new Date().toISOString()
         }));
+        
+        // Show success message
+        setSuccess('Вход через Google выполнен успешно!');
+        
+        // Redirect to profile or main page after successful login
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
       } else {
-        // New user, create document in Firestore
+        // New user, create document in Firestore with required fields
         const userData = {
           uid: user.uid,
           name: user.displayName || 'Пользователь',
           email: user.email || '',
-          avatarUrl: user.photoURL || '',
-          favoriteAnimals: [],
-          registrationDate: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
+          avatarUrl: user.photoURL || 'https://firebasestorage.googleapis.com/v0/b/animallpedia.appspot.com/o/default-avatar.png?alt=media',
+          registrationDate: serverTimestamp(),
+          lastLogin: serverTimestamp()
         };
         
         await setDoc(doc(db, 'users', user.uid), userData);
         
         // Dispatch to Redux store
-        dispatch(setUser(userData));
+        dispatch(setUser({
+          uid: user.uid,
+          name: user.displayName || 'Пользователь',
+          email: user.email || '',
+          avatarUrl: user.photoURL || 'https://firebasestorage.googleapis.com/v0/b/animallpedia.appspot.com/o/default-avatar.png?alt=media',
+          favoriteAnimals: [],
+          registrationDate: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+        }));
+        
+        // Show success message
+        setSuccess('Регистрация через Google выполнена успешно!');
+        
+        // Redirect to profile or main page after successful registration
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
       }
     } catch (err: any) {
       console.error('Google login error:', err);
@@ -151,6 +162,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
         <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4">
           <div className="text-sm text-red-700 dark:text-red-200">
             {error}
+          </div>
+        </div>
+      )}
+      
+      {success && (
+        <div className="rounded-md bg-green-50 dark:bg-green-900/30 p-4">
+          <div className="text-sm text-green-700 dark:text-green-200">
+            {success}
           </div>
         </div>
       )}

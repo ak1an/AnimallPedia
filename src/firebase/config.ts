@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getDatabase } from 'firebase/database';
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -13,7 +14,8 @@ const firebaseConfig = {
   storageBucket: "animallpedia.firebasestorage.app",
   messagingSenderId: "911946213967",
   appId: "1:911946213967:web:9d7afe560956096117983a",
-  measurementId: "G-DWFRPC0H6E"
+  measurementId: "G-DWFRPC0H6E",
+  databaseURL: "https://animallpedia-default-rtdb.firebaseio.com/"
 };
 
 // Initialize Firebase
@@ -33,9 +35,14 @@ const auth = getAuth(app);
 // This will be used for database operations (reading, writing, updating data)
 const db = getFirestore(app);
 
+// Initialize Firebase Realtime Database and get a reference to the service
+// This will be used for realtime database operations
+const rtdb = getDatabase(app);
+
 // Export all services for use in the application
 // app: The main Firebase app instance
 // analytics: Firebase Analytics service for tracking user interactions
 // auth: Firebase Authentication service for user management
 // db: Firestore database service for data storage and retrieval
-export { app, analytics, auth, db };
+// rtdb: Realtime Database service for realtime data storage and retrieval
+export { app, analytics, auth, db, rtdb };

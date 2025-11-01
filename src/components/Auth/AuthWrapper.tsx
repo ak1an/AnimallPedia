@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebase/config';
 import { setUser } from '../../store/slices/userSlice';
 import { RootState } from '../../store';
@@ -25,19 +25,41 @@ const AuthWrapper: React.FC = () => {
           
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            // Update last login time
+            // Check if the authenticated user matches the document owner
+            if (auth.currentUser && auth.currentUser.uid === user.uid) {
+              // Update last login time in Firestore using updateDoc for security
+              await updateDoc(doc(db, 'users', user.uid), {
+                lastLogin: serverTimestamp()
+              });
+            }
+            
+            // Prepare user data for Redux store
             const updatedUserData = {
               uid: user.uid,
-              name: userData.name,
-              email: userData.email,
-              avatarUrl: userData.avatarUrl,
+              name: userData.name || user.displayName || 'Пользователь',
+              email: userData.email || user.email || '',
+              avatarUrl: userData.avatarUrl || user.photoURL || 'https://firebasestorage.googleapis.com/v0/b/animallpedia.appspot.com/o/default-avatar.png?alt=media',
               favoriteAnimals: userData.favoriteAnimals || [],
-              registrationDate: userData.registrationDate,
+              registrationDate: userData.registrationDate || new Date().toISOString(),
               lastLogin: new Date().toISOString()
             };
             
             // Dispatch to Redux store
             dispatch(setUser(updatedUserData));
+          } else {
+            // If user document doesn't exist in Firestore, create minimal user data
+            const minimalUserData = {
+              uid: user.uid,
+              name: user.displayName || 'Пользователь',
+              email: user.email || '',
+              avatarUrl: user.photoURL || '',
+              favoriteAnimals: [],
+              registrationDate: new Date().toISOString(),
+              lastLogin: new Date().toISOString()
+            };
+            
+            // Dispatch to Redux store
+            dispatch(setUser(minimalUserData));
           }
         } catch (error) {
           console.error('Error fetching user data:', error);

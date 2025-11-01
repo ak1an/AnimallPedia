@@ -54,7 +54,7 @@ const Header: React.FC = () => {
             <SearchBar />
           </div>
 
-          {/* Right section: Navigation, Translator, Theme Toggle, and User Profile */}
+          {/* Right section: Navigation, Theme Toggle, Translator, and User Profile */}
           <div className="flex items-center space-x-2 md:space-x-4">
             <NavMenu />
             
@@ -63,8 +63,8 @@ const Header: React.FC = () => {
               <SearchBar />
             </div>
             
-            <Translator />
             <ThemeToggle />
+            <Translator />
             <UserProfile />
           </div>
         </div>

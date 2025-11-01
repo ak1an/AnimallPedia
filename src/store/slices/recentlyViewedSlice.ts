@@ -34,9 +34,9 @@ export const recentlyViewedSlice = createSlice({
       // Add to the beginning of the list
       state.animals.unshift(action.payload);
       
-      // Keep only the last 20 animals
-      if (state.animals.length > 20) {
-        state.animals = state.animals.slice(0, 20);
+      // Keep only the last 10 animals
+      if (state.animals.length > 10) {
+        state.animals = state.animals.slice(0, 10);
       }
     },
     clearRecentlyViewed: (state) => {

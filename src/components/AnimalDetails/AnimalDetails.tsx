@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useAuthState } from 'react-firebase-hooks/auth';
 import { FaHeart, FaRegHeart, FaStar, FaRegStar } from 'react-icons/fa';
+import { auth } from '../../firebase/config';
+import { addRecentlyViewedAnimal } from '../../firebase/userOperations';
 
 // Define the Animal interface
 interface Animal {
@@ -28,10 +31,86 @@ import extinctAnimalsData from '../../data/extinctAnimals.json';
 
 const AnimalDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [user] = useAuthState(auth);
   const [animal, setAnimal] = useState<Animal | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Function to add animal to recent list in Firestore
+  const addToRecent = async (animal: Animal) => {
+    if (user) {
+      try {
+        // Add to Firestore
+        await addRecentlyViewedAnimal(user.uid, {
+          id: animal.id.toString(),
+          name: animal.name,
+          category: animal.category,
+          habitat: animal.habitat,
+          photo: animal.photo,
+          short: animal.short || '',
+          details: animal.details || ''
+        });
+      } catch (error) {
+        console.error("Error saving to Firestore:", error);
+        // Fallback to localStorage
+        try {
+          const saved = localStorage.getItem("recentAnimals");
+          let recentAnimals: Animal[] = saved ? JSON.parse(saved) : [];
+          
+          // Remove duplicates
+          const filtered = recentAnimals.filter(a => a.id !== animal.id.toString());
+          
+          // Add current animal to the beginning
+          const updated = [
+            {
+              id: animal.id.toString(),
+              name: animal.name,
+              category: animal.category,
+              habitat: animal.habitat,
+              photo: animal.photo,
+              short: animal.short || '',
+              details: animal.details || ''
+            },
+            ...filtered
+          ].slice(0, 5); // Keep only the last 5 animals
+          
+          // Save to localStorage
+          localStorage.setItem("recentAnimals", JSON.stringify(updated));
+        } catch (localStorageError) {
+          console.error("Error saving to localStorage:", localStorageError);
+        }
+      }
+    } else {
+      // If not authenticated, use localStorage
+      try {
+        const saved = localStorage.getItem("recentAnimals");
+        let recentAnimals: Animal[] = saved ? JSON.parse(saved) : [];
+        
+        // Remove duplicates
+        const filtered = recentAnimals.filter(a => a.id !== animal.id.toString());
+        
+        // Add current animal to the beginning
+        const updated = [
+          {
+            id: animal.id.toString(),
+            name: animal.name,
+            category: animal.category,
+            habitat: animal.habitat,
+            photo: animal.photo,
+            short: animal.short || '',
+            details: animal.details || ''
+          },
+          ...filtered
+        ].slice(0, 5); // Keep only the last 5 animals
+        
+        // Save to localStorage
+        localStorage.setItem("recentAnimals", JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error saving to localStorage:", error);
+      }
+    }
+  };
 
   useEffect(() => {
     // Find animal by ID across all data files
@@ -51,10 +130,12 @@ const AnimalDetails: React.FC = () => {
     
     if (foundAnimal) {
       setAnimal(foundAnimal);
+      // Add animal to recently viewed list
+      addToRecent(foundAnimal);
     }
     
     setLoading(false);
-  }, [id]);
+  }, [id, user]);
 
   const handleLike = () => {
     setIsLiked(!isLiked);

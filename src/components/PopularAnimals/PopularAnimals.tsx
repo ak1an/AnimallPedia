@@ -1,194 +1,160 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { doc, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { addFavoriteAnimal, removeFavoriteAnimal } from '../../store/slices/userSlice';
 import { RootState } from '../../store';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../../firebase/config';
+import AnimalCard from '../Categories/AnimalCard';
+import mammalsData from '../../data/mammals.json';
+import birdsData from '../../data/birds.json';
+import reptilesData from '../../data/reptiles.json';
+import amphibiansData from '../../data/amphibians.json';
+import fishData from '../../data/fish.json';
+import insectsData from '../../data/insects.json';
 
 // Define the animal item type
 interface AnimalItem {
-  id: number;
+  id: string;
   name: string;
+  category: string;
   habitat: string;
-  imageUrl: string;
-  isLiked: boolean;
+  photo: string;
+  short: string;
+  details: string;
   isFavorite: boolean;
+  redBook?: boolean;
+  likeCount?: number;
+  diet?: string;
+  sleep?: string;
+  facts?: string[];
 }
 
 /**
  * PopularAnimals component for AnimalPedia homepage
- * Displays a grid of popular animals with like and favorite functionality
+ * Displays a grid of popular animals based on likes count
  */
 const PopularAnimals: React.FC = () => {
-  const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.user);
+  const [user] = useAuthState(auth);
+  const reduxUser = useSelector((state: RootState) => state.user);
   const [animals, setAnimals] = useState<AnimalItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMountedRef = useRef(true);
 
-  // Mock popular animals data - in a real app, this would come from an API
-  const mockAnimalsData: AnimalItem[] = [
-    {
-      id: 1,
-      name: "Африканский слон",
-      habitat: "Саванны Африки",
-      imageUrl: "https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-      isLiked: false,
-      isFavorite: false
-    },
-    {
-      id: 2,
-      name: "Панда",
-      habitat: "Бамбуковые леса Китая",
-      imageUrl: "https://images.unsplash.com/photo-1524380453100-2b5c6c7c6b7d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-      isLiked: false,
-      isFavorite: false
-    },
-    {
-      id: 3,
-      name: "Белый медведь",
-      habitat: "Арктика",
-      imageUrl: "https://images.unsplash.com/photo-1548439752-228c4f04c050?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-      isLiked: false,
-      isFavorite: false
-    },
-    {
-      id: 4,
-      name: "Тигр",
-      habitat: "Джунгли Азии",
-      imageUrl: "https://images.unsplash.com/photo-1551641932-78a3df9434d0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-      isLiked: false,
-      isFavorite: false
-    },
-    {
-      id: 5,
-      name: "Горилла",
-      habitat: "Горные леса Африки",
-      imageUrl: "https://images.unsplash.com/photo-1548677649-0c2b0d3b1e4a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-      isLiked: false,
-      isFavorite: false
-    },
-    {
-      id: 6,
-      name: "Коала",
-      habitat: "Эвкалиптовые леса Австралии",
-      imageUrl: "https://images.unsplash.com/photo-1544778169-347f7d20aa3f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-      isLiked: false,
-      isFavorite: false
-    },
-    {
-      id: 7,
-      name: "Лев",
-      habitat: "Саванны Африки",
-      imageUrl: "https://images.unsplash.com/photo-1546182990-dffeafbe841d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-      isLiked: false,
-      isFavorite: false
-    },
-    {
-      id: 8,
-      name: "Жираф",
-      habitat: "Саванны Африки",
-      imageUrl: "https://images.unsplash.com/photo-1545388286-761095c9f8f0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80",
-      isLiked: false,
-      isFavorite: false
-    }
+  // Combine all animal data
+  const allAnimals = [
+    ...mammalsData,
+    ...birdsData,
+    ...reptilesData,
+    ...amphibiansData,
+    ...fishData,
+    ...insectsData
   ];
 
-  // Function to simulate fetching popular animals from an API
-  const fetchPopularAnimals = async (): Promise<AnimalItem[]> => {
-    // In a real implementation, this would be an API call:
-    // const response = await fetch('https://api.animalpedia.com/popular-animals');
-    // const data = await response.json();
-    // return data;
-    
-    // For now, we'll use mock data
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(mockAnimalsData);
-      }, 500); // Simulate network delay
-    });
-  };
+  // Create a map of all animals for quick lookup
+  const animalsMap: Record<string, any> = {};
+  allAnimals.forEach((animal: any) => {
+    animalsMap[animal.id] = animal;
+  });
 
-  // Effect to load animals on component mount
+  // Fetch popular animals from Firestore
   useEffect(() => {
-    const loadAnimals = async () => {
+    isMountedRef.current = true;
+    
+    // Set up real-time listener for users collection
+    const unsubscribe = onSnapshot(collection(db, 'users'), (usersSnapshot) => {
+      // Check if component is still mounted
+      if (!isMountedRef.current) return;
+      
       try {
-        setLoading(true);
-        const animalsData = await fetchPopularAnimals();
+        console.log('Users snapshot updated, fetching popular animals...');
+        
+        // Count how many users have liked each animal
+        const likeCounts: Record<string, number> = {};
+        
+        usersSnapshot.forEach((userDoc) => {
+          const userData = userDoc.data();
+          const likedAnimals = userData.likedAnimals || [];
+          
+          likedAnimals.forEach((animalId: string) => {
+            // Check if the animal exists in our local animals data
+            if (animalsMap[animalId]) {
+              if (!likeCounts[animalId]) {
+                likeCounts[animalId] = 0;
+              }
+              likeCounts[animalId]++;
+            }
+          });
+        });
+        
+        console.log('Like counts calculated:', likeCounts);
+        
+        // Convert to array and sort by like count
+        const popularAnimals: any[] = [];
+        for (const [animalId, likeCount] of Object.entries(likeCounts)) {
+          // Only include animals with at least one like
+          if (likeCount > 0 && animalsMap[animalId]) {
+            popularAnimals.push({
+              ...animalsMap[animalId],
+              likeCount
+            });
+          }
+        }
+        
+        // Sort by like count in descending order
+        popularAnimals.sort((a, b) => b.likeCount - a.likeCount);
+        
+        console.log('Sorted popular animals:', popularAnimals);
+        
+        // Get top 5 animals
+        const topAnimals = popularAnimals.slice(0, 5);
+        
+        console.log('Top 5 animals:', topAnimals);
         
         // If user is authenticated, update favorite status based on their favorites
-        if (user.isAuthenticated) {
-          const updatedAnimals = animalsData.map(animal => ({
+        if (reduxUser.isAuthenticated) {
+          const updatedAnimals = topAnimals.map((animal: any) => ({
             ...animal,
-            isFavorite: user.favoriteAnimals.includes(animal.id.toString())
+            isFavorite: reduxUser.favoriteAnimals.includes(animal.id)
           }));
-          setAnimals(updatedAnimals);
+          
+          // Only update state if component is still mounted
+          if (isMountedRef.current) {
+            setAnimals(updatedAnimals);
+          }
         } else {
-          setAnimals(animalsData);
+          // Set default favorite status to false for unauthenticated users
+          const updatedAnimals = topAnimals.map((animal: any) => ({
+            ...animal,
+            isFavorite: false
+          }));
+          
+          // Only update state if component is still mounted
+          if (isMountedRef.current) {
+            setAnimals(updatedAnimals);
+          }
         }
       } catch (error) {
-        console.error("Failed to load animals:", error);
-        // Fallback to mock data if API fails
-        setAnimals(mockAnimalsData);
+        console.error('Error fetching popular animals:', error);
       } finally {
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+      }
+    }, (error) => {
+      // Error handler for the subscription
+      console.error('Firestore subscription error:', error);
+      if (isMountedRef.current) {
         setLoading(false);
       }
+    });
+
+    // Clean up listener on unmount
+    return () => {
+      isMountedRef.current = false;
+      unsubscribe();
     };
-
-    loadAnimals();
-  }, [user]);
-
-  // Handle liking an animal
-  const handleLike = (id: number) => {
-    setAnimals(animals.map(animal => 
-      animal.id === id ? { ...animal, isLiked: !animal.isLiked } : animal
-    ));
-  };
-
-  // Handle adding/removing from favorites
-  const handleFavorite = async (id: number) => {
-    // Check if user is authenticated
-    if (!user.isAuthenticated) {
-      alert('Авторизуйтесь, чтобы добавлять в избранное');
-      return;
-    }
-    
-    try {
-      const animalId = id.toString();
-      const userDocRef = doc(db, 'users', user.uid!);
-      
-      // Find the current animal
-      const animal = animals.find(a => a.id === id);
-      if (!animal) return;
-      
-      // Toggle favorite status
-      const newFavoriteStatus = !animal.isFavorite;
-      
-      // Update Firestore
-      if (newFavoriteStatus) {
-        // Add to favorites
-        await updateDoc(userDocRef, {
-          favoriteAnimals: arrayUnion(animalId)
-        });
-        // Update Redux store
-        dispatch(addFavoriteAnimal(animalId));
-      } else {
-        // Remove from favorites
-        await updateDoc(userDocRef, {
-          favoriteAnimals: arrayRemove(animalId)
-        });
-        // Update Redux store
-        dispatch(removeFavoriteAnimal(animalId));
-      }
-      
-      // Update local state
-      setAnimals(animals.map(animal => 
-        animal.id === id ? { ...animal, isFavorite: newFavoriteStatus } : animal
-      ));
-    } catch (error) {
-      console.error('Error updating favorites:', error);
-      alert('Ошибка при обновлении избранного');
-    }
-  };
+  }, [reduxUser]);
 
   if (loading) {
     return (
@@ -198,8 +164,8 @@ const PopularAnimals: React.FC = () => {
             <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Популярные животные</h2>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((item) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {[1, 2, 3, 4, 5].map((item) => (
               <div 
                 key={item} 
                 className="bg-gradient-to-br from-green-50 to-amber-50 dark:from-gray-800 dark:to-gray-800 rounded-xl shadow-md overflow-hidden animate-pulse"
@@ -221,6 +187,25 @@ const PopularAnimals: React.FC = () => {
     );
   }
 
+  // If no animals have likes, show a message
+  if (animals.length === 0) {
+    return (
+      <section className="py-12 bg-white dark:bg-gray-900 transition-colors duration-300">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Популярные животные</h2>
+          </div>
+          
+          <div className="text-center py-12">
+            <p className="text-xl text-gray-600 dark:text-gray-400">
+              Пока нет популярных животных 😿 Станьте первым, кто поставит лайк!
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-12 bg-white dark:bg-gray-900 transition-colors duration-300">
       <div className="container mx-auto px-4">
@@ -228,55 +213,9 @@ const PopularAnimals: React.FC = () => {
           <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Популярные животные</h2>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {animals.map((animal) => (
-            <div 
-              key={animal.id}
-              className="bg-gradient-to-br from-green-50 to-amber-50 dark:from-gray-800 dark:to-gray-800 rounded-xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col h-full"
-            >
-              <div className="relative">
-                <img 
-                  src={animal.imageUrl} 
-                  alt={animal.name} 
-                  className="w-full h-48 object-cover"
-                />
-              </div>
-              
-              <div className="p-4 flex-grow flex flex-col">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">{animal.name}</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-grow">{animal.habitat}</p>
-                
-                <div className="flex justify-between">
-                  <button 
-                    onClick={() => handleLike(animal.id)}
-                    className={`p-2 rounded-full transition-colors ${
-                      animal.isLiked 
-                        ? 'text-red-500 bg-red-50 dark:bg-red-900/30' 
-                        : 'text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30'
-                    }`}
-                    aria-label={animal.isLiked ? "Убрать лайк" : "Поставить лайк"}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={animal.isLiked ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                  </button>
-                  
-                  <button 
-                    onClick={() => handleFavorite(animal.id)}
-                    className={`p-2 rounded-full transition-colors ${
-                      animal.isFavorite 
-                        ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/30' 
-                        : 'text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
-                    }`}
-                    aria-label={animal.isFavorite ? "Убрать из избранного" : "Добавить в избранное"}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={animal.isFavorite ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <AnimalCard key={animal.id} animal={animal} />
           ))}
         </div>
       </div>

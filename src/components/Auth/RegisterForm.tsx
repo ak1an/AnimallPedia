@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../firebase/config';
+import { registerUser } from './utils/authFunctions';
 import { setUser } from '../../store/slices/userSlice';
 import { mapAuthError } from './utils/authErrors';
 
@@ -17,6 +15,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
@@ -52,6 +51,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     
     if (!validateForm()) {
       return;
@@ -60,28 +60,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     setLoading(true);
     
     try {
-      // Create user with email and password
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // Call the registerUser function from authFunctions
+      await registerUser(name, email, password);
       
-      // Update user profile with display name
-      await updateProfile(user, { displayName: name });
-      
-      // Save user data to Firestore
-      const userData = {
-        uid: user.uid,
-        name,
-        email,
-        avatarUrl: '',
-        favoriteAnimals: [],
-        registrationDate: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-      };
-      
-      await setDoc(doc(db, 'users', user.uid), userData);
-      
-      // Dispatch to Redux store
-      dispatch(setUser(userData));
+      // If registration is successful, redirect to home page
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(mapAuthError(err.code) || 'Ошибка при регистрации');
@@ -102,6 +87,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
         <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4">
           <div className="text-sm text-red-700 dark:text-red-200">
             {error}
+          </div>
+        </div>
+      )}
+      
+      {success && (
+        <div className="rounded-md bg-green-50 dark:bg-green-900/30 p-4">
+          <div className="text-sm text-green-700 dark:text-green-200">
+            {success}
           </div>
         </div>
       )}

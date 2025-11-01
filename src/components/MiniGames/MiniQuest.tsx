@@ -396,21 +396,21 @@ const MiniQuest: React.FC = () => {
                 {quest.options.map((option, index) => (
                   <button
                     key={index}
-                    onClick={() => handleAnswer(option, quest.correctAnswer === option)}
+                    onClick={() => handleAnswer(option.text, quest.correctAnswer === option.text)}
                     disabled={showFeedback}
                     className={`p-3 rounded-lg transition-all duration-200 shadow-sm border ${
-                      selectedAnswer === option 
-                        ? (quest.correctAnswer === option 
+                      selectedAnswer === option.text 
+                        ? (quest.correctAnswer === option.text 
                             ? 'bg-green-100 dark:bg-green-900/30 border-green-500' 
                             : 'bg-red-100 dark:bg-red-900/30 border-red-500')
                         : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:shadow-md'
                     } ${
-                      showFeedback && quest.correctAnswer === option 
+                      showFeedback && quest.correctAnswer === option.text 
                         ? 'bg-green-100 dark:bg-green-900/30 border-green-500' 
                         : ''
                     }`}
                   >
-                    <span className="text-gray-900 dark:text-white">{option}</span>
+                    <span className="text-gray-900 dark:text-white">{option.text}</span>
                   </button>
                 ))}
               </div>
