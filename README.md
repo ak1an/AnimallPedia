@@ -50,6 +50,10 @@ To create a production build:
 npm run build
 ```
 
+## Deployment to Vercel
+
+This project is configured for deployment to Vercel. See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+
 ## Project Structure
 
 ```
