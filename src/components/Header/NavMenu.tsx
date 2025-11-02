@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaInfoCircle, FaGamepad, FaHeart, FaNewspaper, FaBook, FaComments } from 'react-icons/fa';
+
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ReactElement;
+}
 
 interface NavMenuProps {
   isMobile?: boolean;
@@ -11,14 +17,21 @@ interface NavMenuProps {
 const NavMenu: React.FC<NavMenuProps> = ({ isMobile = false, closeMenu = () => {} }) => {
   const location = useLocation();
 
-  const navItems = [
-    { to: '/categories', label: 'Категории', icon: <FaBook /> },
-    { to: '/habitat-filter', label: 'Среда обитания', icon: <FaBook /> },
-    { to: '/red-book', label: 'Красная книга', icon: <FaBook /> },
-    { to: '/games', label: 'Игры', icon: <FaGamepad /> },
-    { to: '/news', label: 'Новости', icon: <FaNewspaper /> },
-    { to: '/reviews', label: 'Отзывы', icon: <FaComments /> },
-    { to: '/about', label: 'О нас', icon: <FaInfoCircle /> },
+  // Create icon components separately to avoid TS2786 error
+  const bookIcon = <FaBook />;
+  const gamepadIcon = <FaGamepad />;
+  const newspaperIcon = <FaNewspaper />;
+  const commentsIcon = <FaComments />;
+  const infoIcon = <FaInfoCircle />;
+
+  const navItems: NavItem[] = [
+    { to: '/categories', label: 'Категории', icon: bookIcon },
+    { to: '/habitat-filter', label: 'Среда обитания', icon: bookIcon },
+    { to: '/red-book', label: 'Красная книга', icon: bookIcon },
+    { to: '/games', label: 'Игры', icon: gamepadIcon },
+    { to: '/news', label: 'Новости', icon: newspaperIcon },
+    { to: '/reviews', label: 'Отзывы', icon: commentsIcon },
+    { to: '/about', label: 'О нас', icon: infoIcon },
   ];
 
   if (isMobile) {
